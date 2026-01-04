@@ -1,13 +1,9 @@
 from rdkit import Chem
+from itertools import product
+from rdkit import RDLogger
+import mols2grid
+RDLogger.DisableLog('rdApp.*')
 
-original_smiles = "C1=CC=C2C(=C1)C(=C(N2)O)C3=NC4=CC=CC=C4C3=O"
-mol = Chem.MolFromSmiles(original_smiles)
-
-# SMARTS pattern for carbonyl oxygen
-carbonyl_smarts = "[OH]"  #Change it with any other group X to replace it
-carbonyl_pattern = Chem.MolFromSmarts(carbonyl_smarts)
-
-# Example fragments for demonstration
 fragments_smiles = [
     "N",        
     "CC",       
@@ -16,26 +12,44 @@ fragments_smiles = [
     "C#N"       
 ]
 
-new_smiles_list = []
+# This is the core with '*' in replacement point
+core_smiles = "CC1(C)CCC(CC1)NC[C@@H](O)-*"
+core = Chem.MolFromSmiles(core_smiles)
 
-if carbonyl_pattern:
-    for fragment_smiles in fragments_smiles:
-        
-        fragment_mol = Chem.MolFromSmiles(fragment_smiles)
-        if fragment_mol:
-            try:
-            
-                new_mol = Chem.ReplaceSubstructs(mol, carbonyl_pattern, fragment_mol, replaceAll=True)[0]
-            
-                new_smiles = Chem.MolToSmiles(new_mol)
-                new_smiles_list.append(new_smiles)
-            except Exception as e:
-                print(f"Error processing fragment {fragment_smiles}: {e}")
-        else:
-            print(f"Failed to parse fragment SMILES: {fragment_smiles}")
-else:
-    print("Failed to parse SMARTS pattern for carbonyl oxygen.")
+# Defining '*' as smarts
+rgroup_smarts = Chem.MolFromSmarts("[#0]")
 
-for smi in new_smiles_list:
-    print(smi)
 
+# rgroup_smiles indicated python list of smiles.
+
+rgroup_smiles = fragments_smiles
+rgroup_mols = [Chem.MolFromSmiles(smi) for smi in rgroup_smiles]
+
+# Create a empty list products where smiles will be appended after replacement. 
+# You can make it as generator that yields one smiles at a time when called.
+products = []
+
+for r_mol in rgroup_mols:
+    if r_mol is None:
+        continue
+
+    replaced = Chem.ReplaceSubstructs(
+        core,
+        rgroup_smarts,
+        r_mol,
+        replaceAll=True
+    )
+
+    if replaced and '.' not in Chem.MolToSmiles(replaced[0]):
+        try:
+            prod = replaced[0]
+            Chem.SanitizeMol(prod)
+            products.append(Chem.MolToSmiles(prod))
+        except:
+            pass
+
+
+# Use mols2grid to display the replaced structure
+products = sorted(set(products))
+smi = [Chem.MolFromSmiles(i) for i in products]
+mols2grid.display(smi)
