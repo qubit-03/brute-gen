@@ -4,13 +4,8 @@ from rdkit import RDLogger
 import mols2grid
 RDLogger.DisableLog('rdApp.*')
 
-fragments_smiles = [
-    "N",        
-    "CC",       
-    "O",       
-    "C(=O)",    
-    "C#N"       
-]
+with open('medchem_fragments.txt', 'r') as file:
+    fragment_smiles = file.readlines()
 
 # This is the core with '*' in replacement point
 core_smiles = "CC1(C)CCC(CC1)NC[C@@H](O)-*"
@@ -53,3 +48,4 @@ for r_mol in rgroup_mols:
 products = sorted(set(products))
 smi = [Chem.MolFromSmiles(i) for i in products]
 mols2grid.display(smi)
+
